@@ -16,7 +16,7 @@ $host = $_SERVER['HTTP_HOST'];
 // Jika proyek Anda langsung diakses dari http://127.0.0.1:8080/ (tanpa subfolder),
 // maka $subfolder = ''; (kosong).
 $subfolder = '/sistem_stok'; // <--- SESUAIKAN INI DENGAN NAMA FOLDER PROYEK ANDA
-define('MINIMUM_STOCK_LEVEL', 10); 
+define('MINIMUM_STOCK_LEVEL', 5); 
 
 define('BASE_URL', "{$protocol}://{$host}{$subfolder}");
 

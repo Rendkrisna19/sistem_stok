@@ -14,11 +14,14 @@ $stock_filter = isset($_GET['stock_filter']) ? $_GET['stock_filter'] : 'all'; //
 // --- Logic for different report types ---
 switch ($report_type) {
     case 'stock':
-        $page_title = 'Laporan Stok Barang';
-        $stock_query = "SELECT i.id, i.item_code, i.item_name, i.quantity, it.type_name, u.unit_name
+        $page_title = 'Laporan Stok Barang Heritage Textile'; // Judul Laporan Stok Diperbarui
+        $stock_filter = isset($_GET['stock_filter']) ? $_GET['stock_filter'] : 'all'; // Default filter stok
+
+        $stock_query = "SELECT i.id, i.item_code, i.item_name, i.quantity, it.type_name, u.unit_name, c.color_name
                         FROM items i
                         LEFT JOIN item_types it ON i.item_type_id = it.id
-                        LEFT JOIN units u ON i.unit_id = u.id";
+                        LEFT JOIN units u ON i.unit_id = u.id
+                        LEFT JOIN colors c ON i.color_id = c.id"; // Tambah JOIN untuk colors
         $where_clauses = [];
         $params = [];
 
@@ -26,7 +29,6 @@ switch ($report_type) {
             $where_clauses[] = "i.quantity <= ?";
             $params[] = MINIMUM_STOCK_LEVEL;
         }
-        // Tambahkan filter lain jika ada, misalnya berdasarkan jenis barang, dll.
 
         if (!empty($where_clauses)) {
             $stock_query .= " WHERE " . implode(" AND ", $where_clauses);
@@ -39,42 +41,28 @@ switch ($report_type) {
         $report_data = $stmt->fetchAll();
         break;
 
-    // case 'incoming':
-    //     $page_title = 'Laporan Barang Masuk';
-    //     // Query untuk laporan barang masuk (akan dikembangkan nanti)
-    //     $report_data = $pdo->query("SELECT t.transaction_code, t.transaction_date, t.quantity,
-    //                                  i.item_code, i.item_name, u.unit_name
-    //                            FROM transactions t
-    //                            JOIN items i ON t.item_id = i.id
-    //                            LEFT JOIN units u ON i.unit_id = u.id
-    //                            WHERE t.transaction_type = 'incoming'
-    //                            ORDER BY t.transaction_date DESC, t.id DESC")->fetchAll();
-    //     break;
-
-    // case 'outgoing':
-    //     $page_title = 'Laporan Barang Keluar';
-    //     // Query untuk laporan barang keluar (akan dikembangkan nanti)
-    //     $report_data = $pdo->query("SELECT t.transaction_code, t.transaction_date, t.quantity,
-    //                                  i.item_code, i.item_name, u.unit_name
-    //                            FROM transactions t
-    //                            JOIN items i ON t.item_id = i.id
-    //                            LEFT JOIN units u ON i.unit_id = u.id
-    //                            WHERE t.transaction_type = 'outgoing'
-    //                            ORDER BY t.transaction_date DESC, t.id DESC")->fetchAll();
-    //     break;
+    // KASUS 'incoming' dan 'outgoing' TELAH DIHAPUS DARI SINI
+    // KARENA MEREKA SEKARANG ADA DI FILE reports_incoming.php dan reports_outgoing.php
 
     case 'struk':
         $page_title = 'Laporan Struk';
         // Ini adalah contoh dummy, laporan struk biasanya lebih kompleks.
-        // Anda perlu memiliki tabel 'sales' atau 'orders' dan detail transaksinya.
         $report_data = []; // Tidak ada data untuk demo awal
         break;
 
     default:
-        // Handle jika type tidak dikenali
         $page_title = 'Laporan Tidak Ditemukan';
         $report_data = [];
         break;
+}
+
+// Prepare report title based on filter
+$report_detail_title = $page_title;
+// Logika untuk incoming/outgoing telah dihapus karena sudah di file terpisah
+if ($report_type == 'stock') {
+    $report_detail_title .= ($stock_filter == 'minimum') ? ' (Stok Minimum)' : ' (Semua Stok)';
+} else {
+    // Untuk struk atau type tidak dikenal, cukup gunakan page_title
 }
 
 ?>
@@ -116,13 +104,13 @@ switch ($report_type) {
                         <h6 class="m-0 font-weight-bold text-primary">Filter Data Stok</h6>
                     </div>
                     <div class="card-body">
-                        <form id="stockFilterForm" method="GET" action="<?= BASE_URL ?>/admin/reports.php">
+                        <form id="reportFilterForm" method="GET" action="<?= BASE_URL ?>/admin/reports.php">
                             <input type="hidden" name="type" value="stock">
                             <div class="row align-items-end">
                                 <div class="col-md-4 mb-3">
-                                    <label for="stock_filter" class="form-label">Stok <span
+                                    <label for="stock_filter_select" class="form-label">Stok <span
                                             class="text-danger">*</span></label>
-                                    <select class="form-select" id="stock_filter" name="stock_filter" required>
+                                    <select class="form-select" id="stock_filter_select" name="stock_filter" required>
                                         <option value="all" <?= ($stock_filter == 'all') ? 'selected' : '' ?>>Semua
                                         </option>
                                         <option value="minimum" <?= ($stock_filter == 'minimum') ? 'selected' : '' ?>>
@@ -134,18 +122,51 @@ switch ($report_type) {
                                         Tampilkan</button>
                                     <button type="button" id="printReportBtn" class="btn btn-warning me-2"><i
                                             class="fas fa-print"></i> Cetak</button>
-                                    <button type="button" id="exportPdfBtn" class="btn btn-success"><i
-                                            class="fas fa-file-pdf"></i> Export PDF</button>
+                                    <button type="button" id="exportExcelBtn" class="btn btn-info"><i
+                                            class="fas fa-file-excel"></i> Export Excel</button>
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
-                <?php endif; // End of stock filter section ?>
+                <?php elseif ($report_type == 'struk'): // Hanya tampilkan form filter jika struk punya filter ?>
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Filter Data <?= $page_title ?></h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="reportFilterForm" method="GET" action="<?= BASE_URL ?>/admin/reports.php">
+                            <input type="hidden" name="type" value="<?= $report_type ?>">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 mb-3">
+                                    <label for="start_date" class="form-label">Tanggal Awal <span
+                                            class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date"
+                                        value="<?= htmlspecialchars($start_date) ?>" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="end_date" class="form-label">Tanggal Akhir <span
+                                            class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date"
+                                        value="<?= htmlspecialchars($end_date) ?>" required>
+                                </div>
+                                <div class="col-md-4 mb-3 d-flex justify-content-start">
+                                    <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i>
+                                        Tampilkan</button>
+                                    <button type="button" id="printReportBtn" class="btn btn-warning me-2"><i
+                                            class="fas fa-print"></i> Cetak</button>
+                                    <button type="button" id="exportExcelBtn" class="btn btn-info"><i
+                                            class="fas fa-file-excel"></i> Export Excel</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <?php endif; // End of filter section for struk ?>
 
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary"><?= $page_title ?> Detail</h6>
+                        <h6 class="m-0 font-weight-bold text-primary"><?= $report_detail_title ?></h6>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -157,21 +178,10 @@ switch ($report_type) {
                                         <?php if ($report_type == 'stock'): ?>
                                         <th>ID Barang</th>
                                         <th>Nama Barang</th>
-                                        <th>Jenis Barang</th>
+                                        <th>Jenis Kain</th>
+                                        <th>Warna</th>
                                         <th>Satuan</th>
                                         <th>Stok Tersedia</th>
-                                        <?php elseif ($report_type == 'incoming'): ?>
-                                        <th>ID Transaksi</th>
-                                        <th>Tanggal</th>
-                                        <th>Barang</th>
-                                        <th>Jumlah Masuk</th>
-                                        <th>Satuan</th>
-                                        <?php elseif ($report_type == 'outgoing'): ?>
-                                        <th>ID Transaksi</th>
-                                        <th>Tanggal</th>
-                                        <th>Barang</th>
-                                        <th>Jumlah Keluar</th>
-                                        <th>Satuan</th>
                                         <?php elseif ($report_type == 'struk'): ?>
                                         <th>ID Struk</th>
                                         <th>Tanggal</th>
@@ -183,7 +193,7 @@ switch ($report_type) {
                                 <tbody>
                                     <?php if (empty($report_data)): ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">Tidak ada data untuk laporan ini.</td>
+                                        <td colspan="7" class="text-center">Tidak ada data untuk laporan ini.</td>
                                     </tr>
                                     <?php else: ?>
                                     <?php $counter = 1; ?>
@@ -194,15 +204,9 @@ switch ($report_type) {
                                         <td><?= htmlspecialchars($row['item_code']) ?></td>
                                         <td><?= htmlspecialchars($row['item_name']) ?></td>
                                         <td><?= htmlspecialchars($row['type_name'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($row['color_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['unit_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['quantity']) ?></td>
-                                        <?php elseif ($report_type == 'incoming' || $report_type == 'outgoing'): ?>
-                                        <td><?= htmlspecialchars($row['transaction_code']) ?></td>
-                                        <td><?= htmlspecialchars(date('d-m-Y', strtotime($row['transaction_date']))) ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($row['item_code'] . ' - ' . $row['item_name']) ?></td>
-                                        <td><?= htmlspecialchars($row['quantity']) ?></td>
-                                        <td><?= htmlspecialchars($row['unit_name'] ?? '-') ?></td>
                                         <?php elseif ($report_type == 'struk'): ?>
                                         <td>[ID Struk]</td>
                                         <td>[Tanggal Struk]</td>
@@ -264,37 +268,52 @@ switch ($report_type) {
                 <?php if ($report_type == 'stock'): ?>[2,
                     "asc"] // Order by Nama Barang (column index 2) for stock report
                 <?php else: ?>[2,
-                    "desc"] // Order by Tanggal (column index 2) for transaction reports
+                    "desc"
+                    ] // Order by Tanggal (column index 2) for transaction reports (for struk report)
                 <?php endif; ?>
             ],
             "columnDefs": [{
-                    "orderable": false,
-                    "targets": [0]
-                } // Disable sorting for 'No.' column
-            ]
+                "orderable": false,
+                "targets": [0]
+            }] // Disable sorting for 'No.' column
         });
 
         // --- AJAX / Print/Export Button Logic ---
         const printReportBtn = document.getElementById('printReportBtn');
-        const exportPdfBtn = document.getElementById('exportPdfBtn');
-        const stockFilterSelect = document.getElementById('stock_filter');
+        //const exportPdfBtn = document.getElementById('exportPdfBtn'); // Dihapus dari HTML
+        const exportExcelBtn = document.getElementById('exportExcelBtn'); // New Excel button
+        const reportFilterForm = document.getElementById('reportFilterForm'); // The form itself
 
+        // Penting: Pastikan id dropdown 'stock_filter' sudah benar di HTML: id="stock_filter_select"
+        // Atau ambil langsung dari form, yang lebih robust
+        const stockFilterSelect = document.getElementById('stock_filter_select'); // Ini untuk filter stok saja
+
+
+        // Pastikan tombol-tombol ada sebelum menambahkan event listener
         if (printReportBtn) {
             printReportBtn.addEventListener('click', function() {
-                const filter = stockFilterSelect.value;
-                // Buka di tab baru untuk cetak
+                const formParams = new URLSearchParams(new FormData(reportFilterForm)).toString();
                 window.open(
-                    `<?= BASE_URL ?>/admin/report_actions.php?action=print_stock&stock_filter=${filter}`,
+                    `<?= BASE_URL ?>/admin/report_actions.php?action=print_${report_type}&${formParams}`,
                     '_blank');
             });
         }
 
-        if (exportPdfBtn) {
-            exportPdfBtn.addEventListener('click', function() {
-                const filter = stockFilterSelect.value;
-                // Buka di tab baru untuk download PDF
+        // Tombol Export PDF sudah dihapus dari HTML
+        // if (exportPdfBtn) {
+        //     exportPdfBtn.addEventListener('click', function() {
+        //         const formParams = new URLSearchParams(new FormData(reportFilterForm)).toString();
+        //         window.open(
+        //             `<?= BASE_URL ?>/admin/report_actions.php?action=export_${report_type}_pdf&${formParams}`,
+        //             '_blank');
+        //     });
+        // }
+
+        if (exportExcelBtn) { // Pastikan ID ini ada di HTML jika ingin berfungsi
+            exportExcelBtn.addEventListener('click', function() {
+                const formParams = new URLSearchParams(new FormData(reportFilterForm)).toString();
                 window.open(
-                    `<?= BASE_URL ?>/admin/report_actions.php?action=export_stock_pdf&stock_filter=${filter}`,
+                    `<?= BASE_URL ?>/admin/report_actions.php?action=export_${report_type}_excel&${formParams}`,
                     '_blank');
             });
         }

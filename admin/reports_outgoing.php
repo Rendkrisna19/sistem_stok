@@ -15,10 +15,12 @@ $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : '';
 
 // Logic for Outgoing Report data fetching
 $outgoing_query = "SELECT t.transaction_code, t.transaction_date, t.quantity,
-                             i.item_code, i.item_name, u.unit_name
+                             i.item_code, i.item_name, it.type_name, u.unit_name, c.color_name
                        FROM transactions t
                        JOIN items i ON t.item_id = i.id
+                       LEFT JOIN item_types it ON i.item_type_id = it.id  -- Tambah join untuk jenis kain
                        LEFT JOIN units u ON i.unit_id = u.id
+                       LEFT JOIN colors c ON i.color_id = c.id          -- Tambah join untuk warna
                        WHERE t.transaction_type = 'outgoing'";
 $where_clauses = [];
 $params = [];
@@ -113,8 +115,10 @@ if (!empty($start_date) && !empty($end_date)) {
                                         Tampilkan</button>
                                     <button type="button" id="printReportBtn" class="btn btn-warning me-2"><i
                                             class="fas fa-print"></i> Cetak</button>
-                                    <button type="button" id="exportPdfBtn" class="btn btn-success"><i
+                                    <button type="button" id="exportPdfBtn" class="btn btn-success me-2"><i
                                             class="fas fa-file-pdf"></i> Export PDF</button>
+                                    <button type="button" id="exportExcelBtn" class="btn btn-info"><i
+                                            class="fas fa-file-excel"></i> Export Excel</button>
                                 </div>
                             </div>
                         </form>
@@ -135,6 +139,8 @@ if (!empty($start_date) && !empty($end_date)) {
                                         <th>ID Transaksi</th>
                                         <th>Tanggal</th>
                                         <th>Barang</th>
+                                        <th>Jenis Kain</th>
+                                        <th>Warna</th>
                                         <th>Jumlah Keluar</th>
                                         <th>Satuan</th>
                                     </tr>
@@ -142,7 +148,7 @@ if (!empty($start_date) && !empty($end_date)) {
                                 <tbody>
                                     <?php if (empty($report_data)): ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">Tidak ada data untuk laporan ini.</td>
+                                        <td colspan="8" class="text-center">Tidak ada data untuk laporan ini.</td>
                                     </tr>
                                     <?php else: ?>
                                     <?php $counter = 1; ?>
@@ -153,6 +159,8 @@ if (!empty($start_date) && !empty($end_date)) {
                                         <td><?= htmlspecialchars(date('d-m-Y', strtotime($row['transaction_date']))) ?>
                                         </td>
                                         <td><?= htmlspecialchars($row['item_code'] . ' - ' . $row['item_name']) ?></td>
+                                        <td><?= htmlspecialchars($row['type_name'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($row['color_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['quantity']) ?></td>
                                         <td><?= htmlspecialchars($row['unit_name'] ?? '-') ?></td>
                                     </tr>
@@ -209,21 +217,20 @@ if (!empty($start_date) && !empty($end_date)) {
                 [2, "desc"]
             ], // Order by Tanggal (column index 2) descending
             "columnDefs": [{
-                    "orderable": false,
-                    "targets": [0]
-                } // Disable sorting for 'No.' column
-            ]
+                "orderable": false,
+                "targets": [0]
+            }] // Disable sorting for 'No.' column
         });
 
-        // --- Print/Export Button Logic ---
+        // --- AJAX / Print/Export Button Logic ---
         const printReportBtn = document.getElementById('printReportBtn');
         const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportExcelBtn = document.getElementById('exportExcelBtn'); // Excel button
         const reportFilterForm = document.getElementById('reportFilterForm'); // The form itself
 
-        if (printReportBtn && exportPdfBtn && reportFilterForm) {
+        if (printReportBtn && exportPdfBtn && exportExcelBtn && reportFilterForm) {
             printReportBtn.addEventListener('click', function() {
                 const formParams = new URLSearchParams(new FormData(reportFilterForm)).toString();
-                // Pass action and relevant type to report_actions.php
                 window.open(
                     `<?= BASE_URL ?>/admin/report_actions.php?action=print_outgoing&${formParams}`,
                     '_blank');
@@ -231,9 +238,15 @@ if (!empty($start_date) && !empty($end_date)) {
 
             exportPdfBtn.addEventListener('click', function() {
                 const formParams = new URLSearchParams(new FormData(reportFilterForm)).toString();
-                // Pass action and relevant type to report_actions.php
                 window.open(
                     `<?= BASE_URL ?>/admin/report_actions.php?action=export_outgoing_pdf&${formParams}`,
+                    '_blank');
+            });
+
+            exportExcelBtn.addEventListener('click', function() {
+                const formParams = new URLSearchParams(new FormData(reportFilterForm)).toString();
+                window.open(
+                    `<?= BASE_URL ?>/admin/report_actions.php?action=export_outgoing_excel&${formParams}`,
                     '_blank');
             });
         }

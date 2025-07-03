@@ -1,0 +1,8 @@
+akun admin
+username : admin
+password : admin123
+
+akun pemilik
+username : Rendy
+password : 123
+daftarkan di admin 

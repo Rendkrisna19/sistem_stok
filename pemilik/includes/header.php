@@ -31,7 +31,8 @@
                         role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <img src="https://www.pngmart.com/files/21/Admin-Profile-PNG.png" alt="User Avatar"
                             class="rounded-circle me-2" width="30" height="30">
-                        <span class="d-none d-lg-inline"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
+                        <span
+                            class="d-none d-lg-inline"><?= htmlspecialchars($_SESSION['username'] ?? 'Pemilik') ?></span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                         <!-- <a class="dropdown-item" href="#">Profil</a> -->

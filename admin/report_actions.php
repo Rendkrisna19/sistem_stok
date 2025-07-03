@@ -10,6 +10,11 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
+// Composer autoload untuk PhpSpreadsheet
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
+
 require_admin_role(); // Pastikan hanya admin yang bisa mengakses
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -21,10 +26,11 @@ $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : '';
 
 // --- Fungsi untuk mendapatkan data laporan Stok ---
 function getStockReportData($pdo, $filter) {
-    $stock_query = "SELECT i.id, i.item_code, i.item_name, i.quantity, it.type_name, u.unit_name
+    $stock_query = "SELECT i.id, i.item_code, i.item_name, i.quantity, it.type_name, u.unit_name, c.color_name
                     FROM items i
                     LEFT JOIN item_types it ON i.item_type_id = it.id
-                    LEFT JOIN units u ON i.unit_id = u.id";
+                    LEFT JOIN units u ON i.unit_id = u.id
+                    LEFT JOIN colors c ON i.color_id = c.id"; // Pastikan JOIN dan SELECT untuk warna sudah ada
     $where_clauses = [];
     $params = [];
 
@@ -47,10 +53,12 @@ function getStockReportData($pdo, $filter) {
 // --- Fungsi untuk mendapatkan data laporan Barang Masuk ---
 function getIncomingReportData($pdo, $start_date, $end_date) {
     $incoming_query = "SELECT t.transaction_code, t.transaction_date, t.quantity,
-                                 i.item_code, i.item_name, u.unit_name
+                                 i.item_code, i.item_name, it.type_name, u.unit_name, c.color_name
                            FROM transactions t
                            JOIN items i ON t.item_id = i.id
+                           LEFT JOIN item_types it ON i.item_type_id = it.id  -- Tambah join untuk jenis kain
                            LEFT JOIN units u ON i.unit_id = u.id
+                           LEFT JOIN colors c ON i.color_id = c.id          -- Tambah join untuk warna
                            WHERE t.transaction_type = 'incoming'";
     $where_clauses = [];
     $params = [];
@@ -82,10 +90,12 @@ function getIncomingReportData($pdo, $start_date, $end_date) {
 // --- Fungsi untuk mendapatkan data laporan Barang Keluar ---
 function getOutgoingReportData($pdo, $start_date, $end_date) {
     $outgoing_query = "SELECT t.transaction_code, t.transaction_date, t.quantity,
-                                 i.item_code, i.item_name, u.unit_name
+                                 i.item_code, i.item_name, it.type_name, u.unit_name, c.color_name
                            FROM transactions t
                            JOIN items i ON t.item_id = i.id
+                           LEFT JOIN item_types it ON i.item_type_id = it.id  -- Tambah join untuk jenis kain
                            LEFT JOIN units u ON i.unit_id = u.id
+                           LEFT JOIN colors c ON i.color_id = c.id          -- Tambah join untuk warna
                            WHERE t.transaction_type = 'outgoing'";
     $where_clauses = [];
     $params = [];
@@ -121,7 +131,7 @@ function generateStockReportHtml($data, $filter_text) {
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Laporan Stok Barang</title>
+        <title>Laporan Stok Barang Heritage Textile</title>
         <style>
             body { font-family: "Poppins", sans-serif; margin: 20px; font-size: 10pt; }
             h1 { font-size: 18pt; text-align: center; margin-bottom: 20px; }
@@ -139,7 +149,7 @@ function generateStockReportHtml($data, $filter_text) {
         </style>
     </head>
     <body>
-        <h1>Laporan Stok Barang</h1>
+        <h1>Laporan Stok Barang Heritage Textile</h1>
         <div class="filter-info">Filter: ' . htmlspecialchars(ucfirst($filter_text)) . '</div>
         <table>
             <thead>
@@ -147,15 +157,14 @@ function generateStockReportHtml($data, $filter_text) {
                     <th>No.</th>
                     <th>ID Barang</th>
                     <th>Nama Barang</th>
-                    <th>Jenis Barang</th>
-                    <th>Satuan</th>
+                    <th>Jenis Kain</th> <th>Warna</th> <th>Satuan</th>
                     <th>Stok Tersedia</th>
                 </tr>
             </thead>
             <tbody>';
 
     if (empty($data)) {
-        $html .= '<tr><td colspan="6" style="text-align: center;">Tidak ada data stok.</td></tr>';
+        $html .= '<tr><td colspan="7" style="text-align: center;">Tidak ada data stok.</td></tr>'; // Colspan diperbarui
     } else {
         $counter = 1;
         foreach ($data as $row) {
@@ -163,7 +172,8 @@ function generateStockReportHtml($data, $filter_text) {
             $html .= '<td>' . $counter++ . '</td>';
             $html .= '<td>' . htmlspecialchars($row['item_code']) . '</td>';
             $html .= '<td>' . htmlspecialchars($row['item_name']) . '</td>';
-            $html .= '<td>' . htmlspecialchars($row['type_name'] ?? '-') . '</td>';
+            $html .= '<td>' . htmlspecialchars($row['type_name'] ?? '-') . '</td>'; // Ini sekarang Jenis Kain
+            $html .= '<td>' . htmlspecialchars($row['color_name'] ?? '-') . '</td>'; // Ditambahkan
             $html .= '<td>' . htmlspecialchars($row['unit_name'] ?? '-') . '</td>';
             $html .= '<td>' . htmlspecialchars($row['quantity']) . '</td>';
             $html .= '</tr>';
@@ -223,14 +233,14 @@ function generateIncomingReportHtml($data, $start_date_str, $end_date_str) {
                     <th>ID Transaksi</th>
                     <th>Tanggal</th>
                     <th>Barang</th>
-                    <th>Jumlah Masuk</th>
+                    <th>Jenis Kain</th> <th>Warna</th> <th>Jumlah Masuk</th>
                     <th>Satuan</th>
                 </tr>
             </thead>
             <tbody>';
 
     if (empty($data)) {
-        $html .= '<tr><td colspan="6" style="text-align: center;">Tidak ada data barang masuk.</td></tr>';
+        $html .= '<tr><td colspan="8" style="text-align: center;">Tidak ada data barang masuk.</td></tr>'; // Colspan diperbarui
     } else {
         $counter = 1;
         foreach ($data as $row) {
@@ -239,6 +249,8 @@ function generateIncomingReportHtml($data, $start_date_str, $end_date_str) {
             $html .= '<td>' . htmlspecialchars($row['transaction_code']) . '</td>';
             $html .= '<td>' . htmlspecialchars(date('d-m-Y', strtotime($row['transaction_date']))) . '</td>';
             $html .= '<td>' . htmlspecialchars($row['item_code'] . ' - ' . $row['item_name']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row['type_name'] ?? '-') . '</td>'; // Jenis Kain
+            $html .= '<td>' . htmlspecialchars($row['color_name'] ?? '-') . '</td>'; // Warna
             $html .= '<td>' . htmlspecialchars($row['quantity']) . '</td>';
             $html .= '<td>' . htmlspecialchars($row['unit_name'] ?? '-') . '</td>';
             $html .= '</tr>';
@@ -298,14 +310,14 @@ function generateOutgoingReportHtml($data, $start_date_str, $end_date_str) {
                     <th>ID Transaksi</th>
                     <th>Tanggal</th>
                     <th>Barang</th>
-                    <th>Jumlah Keluar</th>
+                    <th>Jenis Kain</th> <th>Warna</th> <th>Jumlah Keluar</th>
                     <th>Satuan</th>
                 </tr>
             </thead>
             <tbody>';
 
     if (empty($data)) {
-        $html .= '<tr><td colspan="6" style="text-align: center;">Tidak ada data barang keluar.</td></tr>';
+        $html .= '<tr><td colspan="8" style="text-align: center;">Tidak ada data barang keluar.</td></tr>'; // Colspan diperbarui
     } else {
         $counter = 1;
         foreach ($data as $row) {
@@ -314,6 +326,8 @@ function generateOutgoingReportHtml($data, $start_date_str, $end_date_str) {
             $html .= '<td>' . htmlspecialchars($row['transaction_code']) . '</td>';
             $html .= '<td>' . htmlspecialchars(date('d-m-Y', strtotime($row['transaction_date']))) . '</td>';
             $html .= '<td>' . htmlspecialchars($row['item_code'] . ' - ' . $row['item_name']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row['type_name'] ?? '-') . '</td>'; // Jenis Kain
+            $html .= '<td>' . htmlspecialchars($row['color_name'] ?? '-') . '</td>'; // Warna
             $html .= '<td>' . htmlspecialchars($row['quantity']) . '</td>';
             $html .= '<td>' . htmlspecialchars($row['unit_name'] ?? '-') . '</td>';
             $html .= '</tr>';

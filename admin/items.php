@@ -4,12 +4,12 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../components/db.php';
 require_once __DIR__ . '/../components/functions.php';
 
-require_admin_role(); // Pastikan hanya admin yang bisa mengakses
+require_pemilik_or_admin_role(); // Pemilik dan Admin bisa akses halaman ini
 
 $success_message = '';
 $error_message = '';
 
-// --- CRUD Operations ---
+// --- CRUD Operations (Dibatasi hanya untuk Admin) ---
 
 // Generate simple ID Barang like B00XX
 function generateItemID($pdo) {
@@ -21,67 +21,76 @@ function generateItemID($pdo) {
 
 // Add Item (CREATE)
 if (isset($_POST['add_item'])) {
-    $item_name = trim($_POST['item_name']);
-    $quantity = (int)$_POST['quantity'];
-    $stock_value = (float)$_POST['stock_value'];
-    $item_type_id = (int)$_POST['item_type_id'];
-    $unit_id = (int)$_POST['unit_id'];
-    $item_code = generateItemID($pdo); // Generate new ID for item
-
-    if (empty($item_name) || !is_numeric($quantity) || !is_numeric($stock_value) || $item_type_id <= 0 || $unit_id <= 0) {
-        $error_message = 'Semua field harus diisi dengan benar.';
+    if ($_SESSION['role'] !== 'admin') { // HANYA ADMIN YANG BISA TAMBAH
+        $error_message = 'Anda tidak memiliki izin untuk menambah barang.';
     } else {
-        try {
-            // Adjusting quantity to allow negative if user inputs it, based on image
-            // In a real system, you'd prevent manual negative stock addition
-            if ($quantity < 0) {
-                // Warning, but proceed as image shows negative stock
-            }
+        $item_name = trim($_POST['item_name']);
+        $quantity = (int)$_POST['quantity'];
+        $stock_value = (float)$_POST['stock_value'];
+        $item_type_id = (int)$_POST['item_type_id']; // Sekarang ini adalah Jenis Kain
+        $unit_id = (int)$_POST['unit_id'];
+        $color_id = (int)$_POST['color_id'];
+        $item_code = generateItemID($pdo);
 
-            $stmt = $pdo->prepare("INSERT INTO items (item_code, item_name, quantity, stock_value, item_type_id, unit_id) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$item_code, $item_name, $quantity, $stock_value, $item_type_id, $unit_id]);
-            $success_message = 'Barang berhasil ditambahkan.';
-            // Redirect to clean URL after submission to prevent form re-submission
-            redirect(BASE_URL . '/admin/items.php?msg=added');
-        } catch (PDOException $e) {
-            $error_message = 'Gagal menambahkan barang: ' . $e->getMessage();
+        if (empty($item_name) || !is_numeric($quantity) || !is_numeric($stock_value) || $item_type_id <= 0 || $unit_id <= 0 || $color_id <= 0) {
+            $error_message = 'Semua field harus diisi dengan benar.';
+        } else {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO items (item_code, item_name, quantity, stock_value, item_type_id, unit_id, color_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$item_code, $item_name, $quantity, $stock_value, $item_type_id, $unit_id, $color_id]);
+                $success_message = 'Barang berhasil ditambahkan.';
+                redirect(BASE_URL . '/admin/items.php?msg=added');
+            } catch (PDOException $e) {
+                $error_message = 'Gagal menambahkan barang: ' . $e->getMessage();
+            }
         }
     }
 }
 
 // Edit Item (UPDATE)
 if (isset($_POST['edit_item'])) {
-    $id = (int)$_POST['item_id'];
-    $item_name = trim($_POST['item_name']);
-    $quantity = (int)$_POST['quantity'];
-    $stock_value = (float)$_POST['stock_value'];
-    $item_type_id = (int)$_POST['item_type_id'];
-    $unit_id = (int)$_POST['unit_id'];
-
-    if (empty($item_name) || !is_numeric($quantity) || !is_numeric($stock_value) || $item_type_id <= 0 || $unit_id <= 0 || $id <= 0) {
-        $error_message = 'Semua field harus diisi dengan benar.';
+    if ($_SESSION['role'] !== 'admin') { // HANYA ADMIN YANG BISA EDIT
+        $error_message = 'Anda tidak memiliki izin untuk mengedit barang.';
     } else {
-        try {
-            $stmt = $pdo->prepare("UPDATE items SET item_name = ?, quantity = ?, stock_value = ?, item_type_id = ?, unit_id = ? WHERE id = ?");
-            $stmt->execute([$item_name, $quantity, $stock_value, $item_type_id, $unit_id, $id]);
-            $success_message = 'Barang berhasil diperbarui.';
-            redirect(BASE_URL . '/admin/items.php?msg=updated');
-        } catch (PDOException $e) {
-            $error_message = 'Gagal memperbarui barang: ' . $e->getMessage();
+        $id = (int)$_POST['item_id'];
+        $item_name = trim($_POST['item_name']);
+        $quantity = (int)$_POST['quantity'];
+        $stock_value = (float)$_POST['stock_value'];
+        $item_type_id = (int)$_POST['item_type_id']; // Sekarang ini adalah Jenis Kain
+        $unit_id = (int)$_POST['unit_id'];
+        $color_id = (int)$_POST['color_id'];
+
+        if (empty($item_name) || !is_numeric($quantity) || !is_numeric($stock_value) || $item_type_id <= 0 || $unit_id <= 0 || $color_id <= 0 || $id <= 0) {
+            $error_message = 'Semua field harus diisi dengan benar.';
+        } else {
+            try {
+                $stmt = $pdo->prepare("UPDATE items SET item_name = ?, quantity = ?, stock_value = ?, item_type_id = ?, unit_id = ?, color_id = ? WHERE id = ?");
+                $stmt->execute([$item_name, $quantity, $stock_value, $item_type_id, $unit_id, $color_id, $id]);
+                $success_message = 'Barang berhasil diperbarui.';
+                redirect(BASE_URL . '/admin/items.php?msg=updated');
+            } catch (PDOException $e) {
+                $error_message = 'Gagal memperbarui barang: ' . $e->getMessage();
+            }
         }
     }
 }
 
 // Delete Item (DELETE)
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    try {
-        $stmt = $pdo->prepare("DELETE FROM items WHERE id = ?");
-        $stmt->execute([$id]);
-        $success_message = 'Barang berhasil dihapus.';
-        redirect(BASE_URL . '/admin/items.php?msg=deleted');
-    } catch (PDOException $e) {
-        $error_message = 'Gagal menghapus barang: ' . $e->getMessage();
+    if ($_SESSION['role'] !== 'admin') { // HANYA ADMIN YANG BISA HAPUS
+        $error_message = 'Anda tidak memiliki izin untuk menghapus barang.';
+        redirect(BASE_URL . '/admin/items.php?msg=no_permission_delete');
+    } else {
+        $id = (int)$_GET['id'];
+        try {
+            $stmt = $pdo->prepare("DELETE FROM items WHERE id = ?");
+            $stmt->execute([$id]);
+            $success_message = 'Barang berhasil dihapus.';
+            redirect(BASE_URL . '/admin/items.php?msg=deleted');
+        } catch (PDOException $e) {
+            $error_message = 'Gagal menghapus barang: ' . $e->getMessage();
+            redirect(BASE_URL . '/admin/items.php?msg=error_delete');
+        }
     }
 }
 
@@ -93,21 +102,29 @@ if (isset($_GET['msg'])) {
         $success_message = 'Barang berhasil diperbarui.';
     } elseif ($_GET['msg'] == 'deleted') {
         $success_message = 'Barang berhasil dihapus.';
+    } elseif ($_GET['msg'] == 'no_permission_delete') {
+        $error_message = 'Anda tidak memiliki izin untuk menghapus barang.';
+    } elseif ($_GET['msg'] == 'error_delete') {
+        $error_message = 'Terjadi kesalahan saat menghapus barang.';
     }
 }
 
 
 // --- Data Retrieval for Display ---
-// Fetch Item Types and Units for dropdowns
-$item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_name")->fetchAll();
+// Fetch Item Types (now used for Jenis Kain), Units, and Colors for dropdowns
+$item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_name")->fetchAll(); // Ini sekarang untuk Jenis Kain
 $units = $pdo->query("SELECT id, unit_name FROM units ORDER BY unit_name")->fetchAll();
+$colors = $pdo->query("SELECT id, color_name FROM colors ORDER BY color_name")->fetchAll();
 
-// Fetch all items with joined data for Datatables (client-side processing)
-$items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock_value, i.item_type_id, i.unit_id, it.type_name, u.unit_name
-                       FROM items i
-                       LEFT JOIN item_types it ON i.item_type_id = it.id
-                       LEFT JOIN units u ON i.unit_id = u.id
-                       ORDER BY i.id ASC")->fetchAll();
+// Fetch all items with joined data for Datatables
+$items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock_value,
+                               i.item_type_id, i.unit_id, i.color_id,
+                               it.type_name, u.unit_name, c.color_name
+                        FROM items i
+                        LEFT JOIN item_types it ON i.item_type_id = it.id -- Ini sekarang join dengan Jenis Kain
+                        LEFT JOIN units u ON i.unit_id = u.id
+                        LEFT JOIN colors c ON i.color_id = c.id
+                        ORDER BY i.id ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -115,7 +132,7 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Barang - Admin</title>
+    <title>Daftar Barang Heritage Textile - Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -127,29 +144,43 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
         crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="./assets/css/admin_styles.css">
-
-
 </head>
 
 <body>
     <div class="d-flex" id="wrapper">
-        <?php include __DIR__ . '/includes/sidebar.php'; ?>
+        <?php
+        // Pemilik akan menggunakan sidebar mereka sendiri jika mereka sedang di path pemilik
+        if (dirname($_SERVER['PHP_SELF']) == '/sistem_stok/pemilik') {
+            include __DIR__ . '/../pemilik/includes/sidebar.php';
+        } else {
+            include __DIR__ . '/includes/sidebar.php';
+        }
+        ?>
 
         <div id="page-content-wrapper">
-            <?php include __DIR__ . '/includes/header.php'; ?>
+            <?php
+            // Pemilik akan menggunakan header mereka sendiri jika mereka sedang di path pemilik
+            if (dirname($_SERVER['PHP_SELF']) == '/sistem_stok/pemilik') {
+                include __DIR__ . '/../pemilik/includes/header.php';
+            } else {
+                include __DIR__ . '/includes/header.php';
+            }
+            ?>
 
             <div class="main-content-area">
                 <div class="content-header">
-                    <h1>Data Barang</h1>
+                    <h1>Daftar Barang Heritage Textile</h1>
                 </div>
 
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                         <h6 class="m-0 font-weight-bold text-primary">Daftar Barang</h6>
+                        <?php if ($_SESSION['role'] === 'admin'): // Tombol tambah hanya untuk admin ?>
                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                             data-bs-target="#addItemModal">
                             <i class="fas fa-plus"></i> Tambah Barang
                         </button>
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -160,6 +191,8 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                                         <th>No.</th>
                                         <th>ID Barang</th>
                                         <th>Nama Barang</th>
+                                        <th>Jenis Kain</th>
+                                        <th>Warna</th>
                                         <th>Stok</th>
                                         <th>Satuan</th>
                                         <th>Aksi</th>
@@ -168,7 +201,7 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                                 <tbody>
                                     <?php if (empty($items)): ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">Tidak ada data barang.</td>
+                                        <td colspan="8" class="text-center">Tidak ada data barang.</td>
                                     </tr>
                                     <?php else: ?>
                                     <?php $counter = 1; ?>
@@ -177,21 +210,29 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                                         <td><?= $counter++ ?></td>
                                         <td><?= htmlspecialchars($item['item_code']) ?></td>
                                         <td><?= htmlspecialchars($item['item_name']) ?></td>
+                                        <td><?= htmlspecialchars($item['type_name'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($item['color_name'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($item['quantity']) ?></td>
                                         <td><?= htmlspecialchars($item['unit_name'] ?? '-') ?></td>
                                         <td>
+                                            <?php if ($_SESSION['role'] === 'admin'): // Tombol edit/hapus hanya untuk admin ?>
                                             <button type="button" class="btn btn-primary btn-sm edit-btn"
                                                 data-bs-toggle="modal" data-bs-target="#editItemModal"
-                                                data-id="<?= $item['id'] ?>"
+                                                data-id="<?= htmlspecialchars($item['id']) ?>"
                                                 data-name="<?= htmlspecialchars($item['item_name']) ?>"
-                                                data-quantity="<?= $item['quantity'] ?>"
-                                                data-stock_value="<?= $item['stock_value'] ?>"
-                                                data-item_type_id="<?= $item['item_type_id'] ?>"
-                                                data-unit_id="<?= $item['unit_id'] ?>">
-                                                <i class="fas fa-edit"></i> </button>
-                                            <a href="?action=delete&id=<?= $item['id'] ?>" class="btn btn-danger btn-sm"
+                                                data-quantity="<?= htmlspecialchars($item['quantity']) ?>"
+                                                data-stock_value="<?= htmlspecialchars($item['stock_value']) ?>"
+                                                data-item_type_id="<?= htmlspecialchars($item['item_type_id']) ?>"
+                                                data-unit_id="<?= htmlspecialchars($item['unit_id']) ?>"
+                                                data-color_id="<?= htmlspecialchars($item['color_id']) ?>"> <i
+                                                    class="fas fa-edit"></i> </button>
+                                            <a href="?action=delete&id=<?= htmlspecialchars($item['id']) ?>"
+                                                class="btn btn-danger btn-sm"
                                                 onclick="return confirm('Apakah Anda yakin ingin menghapus barang ini?');">
                                                 <i class="fas fa-trash-alt"></i> </a>
+                                            <?php else: ?>
+                                            <span class="text-muted">Lihat</span>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -231,11 +272,12 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                                 min="0" required>
                         </div>
                         <div class="mb-3">
-                            <label for="item_type_id" class="form-label">Jenis Barang</label>
-                            <select class="form-control" id="item_type_id" name="item_type_id" required>
-                                <option value="">Pilih Jenis Barang</option>
+                            <label for="item_type_id" class="form-label">Jenis Kain</label> <select class="form-control"
+                                id="item_type_id" name="item_type_id" required>
+                                <option value="">Pilih Jenis Kain</option>
                                 <?php foreach ($item_types as $type): ?>
-                                <option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['type_name']) ?></option>
+                                <option value="<?= htmlspecialchars($type['id']) ?>">
+                                    <?= htmlspecialchars($type['type_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -244,7 +286,18 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                             <select class="form-control" id="unit_id" name="unit_id" required>
                                 <option value="">Pilih Satuan</option>
                                 <?php foreach ($units as $unit): ?>
-                                <option value="<?= $unit['id'] ?>"><?= htmlspecialchars($unit['unit_name']) ?></option>
+                                <option value="<?= htmlspecialchars($unit['id']) ?>">
+                                    <?= htmlspecialchars($unit['unit_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="color_id" class="form-label">Warna Kain</label>
+                            <select class="form-control" id="color_id" name="color_id" required>
+                                <option value="">Pilih Warna</option>
+                                <?php foreach ($colors as $color): ?>
+                                <option value="<?= htmlspecialchars($color['id']) ?>">
+                                    <?= htmlspecialchars($color['color_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -282,11 +335,12 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                                 name="stock_value" min="0" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_item_type_id" class="form-label">Jenis Barang</label>
-                            <select class="form-control" id="edit_item_type_id" name="item_type_id" required>
-                                <option value="">Pilih Jenis Barang</option>
+                            <label for="edit_item_type_id" class="form-label">Jenis Kain</label> <select
+                                class="form-control" id="edit_item_type_id" name="item_type_id" required>
+                                <option value="">Pilih Jenis Kain</option>
                                 <?php foreach ($item_types as $type): ?>
-                                <option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['type_name']) ?></option>
+                                <option value="<?= htmlspecialchars($type['id']) ?>">
+                                    <?= htmlspecialchars($type['type_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -295,7 +349,18 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                             <select class="form-control" id="edit_unit_id" name="unit_id" required>
                                 <option value="">Pilih Satuan</option>
                                 <?php foreach ($units as $unit): ?>
-                                <option value="<?= $unit['id'] ?>"><?= htmlspecialchars($unit['unit_name']) ?></option>
+                                <option value="<?= htmlspecialchars($unit['id']) ?>">
+                                    <?= htmlspecialchars($unit['unit_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_color_id" class="form-label">Warna Kain</label>
+                            <select class="form-control" id="edit_color_id" name="color_id" required>
+                                <option value="">Pilih Warna</option>
+                                <?php foreach ($colors as $color): ?>
+                                <option value="<?= htmlspecialchars($color['id']) ?>">
+                                    <?= htmlspecialchars($color['color_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -341,8 +406,9 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
             var name = button.getAttribute('data-name');
             var quantity = button.getAttribute('data-quantity');
             var stock_value = button.getAttribute('data-stock_value');
-            var item_type_id = button.getAttribute('data-item_type_id');
+            var item_type_id = button.getAttribute('data-item_type_id'); // Ini sekarang Jenis Kain
             var unit_id = button.getAttribute('data-unit_id');
+            var color_id = button.getAttribute('data-color_id'); // field baru
 
             // Update the modal's content.
             var modalTitle = editItemModal.querySelector('.modal-title');
@@ -350,8 +416,10 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
             var itemNameInput = editItemModal.querySelector('#edit_item_name');
             var quantityInput = editItemModal.querySelector('#edit_quantity');
             var stockValueInput = editItemModal.querySelector('#edit_stock_value');
-            var itemTypeIdSelect = editItemModal.querySelector('#edit_item_type_id');
+            var itemTypeIdSelect = editItemModal.querySelector(
+                '#edit_item_type_id'); // Ini sekarang Jenis Kain
             var unitIdSelect = editItemModal.querySelector('#edit_unit_id');
+            var colorIdSelect = editItemModal.querySelector('#edit_color_id'); // field baru
 
             modalTitle.textContent = 'Edit Barang: ' + name;
             itemIdInput.value = id;
@@ -360,6 +428,7 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
             stockValueInput.value = stock_value;
             itemTypeIdSelect.value = item_type_id;
             unitIdSelect.value = unit_id;
+            colorIdSelect.value = color_id;
         });
 
         // Initialize Datatables
@@ -378,10 +447,9 @@ $items = $pdo->query("SELECT i.id, i.item_code, i.item_name, i.quantity, i.stock
                 }
             },
             "columnDefs": [{
-                    "orderable": false,
-                    "targets": 5
-                } // Disable sorting for 'Aksi' column
-            ]
+                "orderable": false,
+                "targets": 7
+            }] // 'Aksi' sekarang di indeks 7 (setelah menghapus Jenis Item)
         });
     });
     </script>

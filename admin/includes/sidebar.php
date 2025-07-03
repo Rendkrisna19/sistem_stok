@@ -3,7 +3,6 @@
     <div class="user-profile">
         <img src="https://www.pngmart.com/files/21/Admin-Profile-PNG.png" alt="User Avatar" class="mb-2">
         <h5><?= htmlspecialchars($_SESSION['username'] ?? 'User Name') ?></h5>
-        <p><?= htmlspecialchars($_SESSION['email'] ?? 'admin@gmail.com') ?></p>
     </div>
     <div class="list-group list-group-flush flex-grow-1">
         <a href="<?= BASE_URL ?>/admin/dashboard.php"
@@ -24,11 +23,15 @@
             </a>
             <a href="<?= BASE_URL ?>/admin/item_types.php"
                 class="list-group-item list-group-item-action sub-item <?php if(basename($_SERVER['PHP_SELF']) == 'item_types.php') echo 'active'; ?>">
-                <i class="fas fa-tags"></i>Jenis Barang
+                <i class="fas fa-tags"></i>Jenis Kain
             </a>
             <a href="<?= BASE_URL ?>/admin/units.php"
                 class="list-group-item list-group-item-action sub-item <?php if(basename($_SERVER['PHP_SELF']) == 'units.php') echo 'active'; ?>">
                 <i class="fas fa-weight-hanging"></i>Satuan
+            </a>
+            <a href="<?= BASE_URL ?>/admin/colors.php"
+                class="list-group-item list-group-item-action sub-item <?php if(basename($_SERVER['PHP_SELF']) == 'colors.php') echo 'active'; ?>">
+                <i class="fas fa-palette"></i>Warna
             </a>
         </div>
 
@@ -71,10 +74,12 @@
 
         </div>
 
+        <?php if ($_SESSION['role'] === 'admin'): // Kondisi ini akan menyembunyikan menu "Pengguna" jika peran bukan admin ?>
         <a href="<?= BASE_URL ?>/admin/users.php"
             class="list-group-item list-group-item-action <?php if(basename($_SERVER['PHP_SELF']) == 'users.php') echo 'active'; ?>">
             <i class="fas fa-users"></i>Pengguna
         </a>
+        <?php endif; ?>
     </div>
     <div id="logout-section">
         <a href="<?= BASE_URL ?>/auth/logout.php" id="logout-btn">

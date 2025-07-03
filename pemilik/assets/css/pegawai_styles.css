@@ -23,13 +23,17 @@ body {
     color: #ecf0f1; /* Light text color for sidebar */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
     transition: margin 0.25s ease-out;
-    margin-left: 0; /* Always visible on desktop by default */
     position: fixed; /* Keep sidebar fixed on desktop */
     z-index: 1000; /* Ensure it's above other content */
     top: 0;
     left: 0;
     display: flex;
     flex-direction: column;
+
+    /* --- PENTING: Penyesuaian default untuk mobile --- */
+    /* Secara default, sembunyikan di mobile */
+    margin-left: -260px; /* Sembunyikan sidebar di luar layar */
+    position: absolute; /* Ubah ke absolute untuk mobile agar tidak memengaruhi margin content */
 }
 
 #sidebar-wrapper .sidebar-heading {
@@ -163,12 +167,16 @@ body {
 /* Page Content Wrapper */
 #page-content-wrapper {
     flex-grow: 1; /* Takes remaining width */
-    margin-left: 260px; /* Offset for the fixed sidebar on desktop */
     transition: margin-left 0.25s ease-out; /* Smooth transition for content when sidebar toggles */
     background-color: #f4f6f9; /* Background matching the image outside the main card */
     display: flex;
     flex-direction: column; /* For sticky footer */
     min-height: 100vh;
+
+    /* --- PENTING: Penyesuaian default untuk mobile --- */
+    /* Secara default, content akan mengambil lebar penuh di mobile */
+    margin-left: 0;
+    width: 100%;
 }
 
 /* Header (Top Navigation Bar) */

@@ -1,0 +1,6 @@
+1. downlod zip
+2. ekstrak di folder htdocs kalau menggunakna xampp, kalau laragon extrack di www
+3. pastikan nama folder = sistem_stok jangan dirubah soalnya sudah BASE_URL dan hindahari duplicate  folder, cek kalau di buka folder langsung ke folder utama
+4. lalu pergi ke mysql, buat database baru dengan nama db_stok (wajib sama) lalu klik import lalu pilih file sql db_stok lalu import
+5. lalu akses ke localhost/sistem_stok
+6. kalau ada kendala chat admin saja 

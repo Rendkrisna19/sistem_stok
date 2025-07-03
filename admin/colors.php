@@ -4,92 +4,93 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../components/db.php';
 require_once __DIR__ . '/../components/functions.php';
 
-require_admin_role(); // Pastikan hanya admin yang bisa mengakses
+require_admin_role(); // Pastikan hanya admin yang bisa mengakses halaman ini
 
 $success_message = '';
 $error_message = '';
 
 // --- CRUD Operations ---
 
-// Add Item Type (CREATE)
-if (isset($_POST['add_item_type'])) {
-    $type_name = trim($_POST['type_name']);
+// Add Color (CREATE)
+if (isset($_POST['add_color'])) {
+    $color_name = trim($_POST['color_name']);
+    $color_hex = trim($_POST['color_hex']); // Optional hex code
 
-    if (empty($type_name)) {
-        $error_message = 'Nama jenis barang tidak boleh kosong.';
+    if (empty($color_name)) {
+        $error_message = 'Nama warna tidak boleh kosong.';
     } else {
         try {
-            $stmt = $pdo->prepare("INSERT INTO item_types (type_name) VALUES (?)");
-            $stmt->execute([$type_name]);
-            $success_message = 'Jenis barang berhasil ditambahkan.';
-            redirect(BASE_URL . '/admin/item_types.php?msg=added');
+            $stmt = $pdo->prepare("INSERT INTO colors (color_name, color_hex) VALUES (?, ?)");
+            $stmt->execute([$color_name, $color_hex]);
+            $success_message = 'Warna berhasil ditambahkan.';
+            redirect(BASE_URL . '/admin/colors.php?msg=added');
         } catch (PDOException $e) {
-            // Cek jika error karena duplikasi nama
-            if ($e->getCode() == '23000') { // SQLSTATE for integrity constraint violation
-                $error_message = 'Jenis barang dengan nama tersebut sudah ada.';
+            if ($e->getCode() == '23000') { // SQLSTATE for integrity constraint violation (unique)
+                $error_message = 'Warna dengan nama tersebut sudah ada.';
             } else {
-                $error_message = 'Gagal menambahkan jenis barang: ' . $e->getMessage();
+                $error_message = 'Gagal menambahkan warna: ' . $e->getMessage();
             }
         }
     }
 }
 
-// Edit Item Type (UPDATE)
-if (isset($_POST['edit_item_type'])) {
-    $id = (int)$_POST['type_id'];
-    $type_name = trim($_POST['type_name']);
+// Edit Color (UPDATE)
+if (isset($_POST['edit_color'])) {
+    $id = (int)$_POST['color_id'];
+    $color_name = trim($_POST['color_name']);
+    $color_hex = trim($_POST['color_hex']);
 
-    if (empty($type_name) || $id <= 0) {
-        $error_message = 'Nama jenis barang tidak boleh kosong dan ID harus valid.';
+    if (empty($color_name) || $id <= 0) {
+        $error_message = 'Nama warna tidak boleh kosong dan ID harus valid.';
     } else {
         try {
-            $stmt = $pdo->prepare("UPDATE item_types SET type_name = ? WHERE id = ?");
-            $stmt->execute([$type_name, $id]);
-            $success_message = 'Jenis barang berhasil diperbarui.';
-            redirect(BASE_URL . '/admin/item_types.php?msg=updated');
+            $stmt = $pdo->prepare("UPDATE colors SET color_name = ?, color_hex = ? WHERE id = ?");
+            $stmt->execute([$color_name, $color_hex, $id]);
+            $success_message = 'Warna berhasil diperbarui.';
+            redirect(BASE_URL . '/admin/colors.php?msg=updated');
         } catch (PDOException $e) {
              if ($e->getCode() == '23000') {
-                $error_message = 'Jenis barang dengan nama tersebut sudah ada.';
+                $error_message = 'Warna dengan nama tersebut sudah ada.';
             } else {
-                $error_message = 'Gagal memperbarui jenis barang: ' . $e->getMessage();
+                $error_message = 'Gagal memperbarui warna: ' . $e->getMessage();
             }
         }
     }
 }
 
-// Delete Item Type (DELETE)
+// Delete Color (DELETE)
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     try {
-        // Cek apakah jenis barang digunakan oleh barang lain
-        $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM items WHERE item_type_id = ?");
+        // Cek apakah warna digunakan oleh barang lain
+        $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM items WHERE color_id = ?");
         $stmt_check->execute([$id]);
         if ($stmt_check->fetchColumn() > 0) {
-            $error_message = 'Tidak dapat menghapus jenis barang ini karena sedang digunakan oleh beberapa barang.';
+            $error_message = 'Tidak dapat menghapus warna ini karena sedang digunakan oleh beberapa barang.';
         } else {
-            $stmt = $pdo->prepare("DELETE FROM item_types WHERE id = ?");
+            $stmt = $pdo->prepare("DELETE FROM colors WHERE id = ?");
             $stmt->execute([$id]);
-            $success_message = 'Jenis barang berhasil dihapus.';
+            $success_message = 'Warna berhasil dihapus.';
         }
-        redirect(BASE_URL . '/admin/item_types.php?msg=deleted');
+        redirect(BASE_URL . '/admin/colors.php?msg=deleted');
     } catch (PDOException $e) {
-        $error_message = 'Gagal menghapus jenis barang: ' . $e->getMessage();
+        $error_message = 'Gagal menghapus warna: ' . $e->getMessage();
     }
 }
 
 // Handle messages from redirect
 if (isset($_GET['msg'])) {
     if ($_GET['msg'] == 'added') {
-        $success_message = 'Jenis barang berhasil ditambahkan.';
+        $success_message = 'Warna berhasil ditambahkan.';
     } elseif ($_GET['msg'] == 'updated') {
-        $success_message = 'Jenis barang berhasil diperbarui.';
+        $success_message = 'Warna berhasil diperbarui.';
     } elseif ($_GET['msg'] == 'deleted') {
-        $success_message = 'Jenis barang berhasil dihapus.';
+        $success_message = 'Warna berhasil dihapus.';
     }
 }
 
-// Fetch all item types for display
-$item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_name ASC")->fetchAll();
+// Fetch all colors for display
+$colors = $pdo->query("SELECT id, color_name, color_hex FROM colors ORDER BY color_name ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -97,7 +98,7 @@ $item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_na
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Jenis Kain - Admin</title>
+    <title>Manajemen Warna - Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -120,7 +121,7 @@ $item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_na
 
             <div class="main-content-area">
                 <div class="content-header">
-                    <h1>Manajemen Jenis Kain</h1>
+                    <h1>Manajemen Warna</h1>
                 </div>
 
                 <?php if (!empty($success_message)): ?>
@@ -138,43 +139,57 @@ $item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_na
 
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-primary">Daftar Jenis Kain</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">Daftar Warna</h6>
                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
-                            data-bs-target="#addItemTypeModal">
-                            <i class="fas fa-plus"></i> Tambah Jenis Barang
+                            data-bs-target="#addColorModal">
+                            <i class="fas fa-plus"></i> Tambah Warna
                         </button>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped" id="itemTypesTable" width="100%"
+                            <table class="table table-bordered table-striped" id="colorsTable" width="100%"
                                 cellspacing="0">
                                 <thead>
                                     <tr>
                                         <th>No.</th>
-                                        <th>Nama Jenis Kain</th>
+                                        <th>Nama Warna</th>
+                                        <th>Kode Hex</th>
+                                        <th>Contoh</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php if (empty($item_types)): ?>
+                                    <?php if (empty($colors)): ?>
                                     <tr>
-                                        <td colspan="3" class="text-center">Tidak ada data jenis barang.</td>
+                                        <td colspan="5" class="text-center">Tidak ada data warna.</td>
                                     </tr>
                                     <?php else: ?>
                                     <?php $counter = 1; ?>
-                                    <?php foreach ($item_types as $type): ?>
+                                    <?php foreach ($colors as $color): ?>
                                     <tr>
                                         <td><?= $counter++ ?></td>
-                                        <td><?= htmlspecialchars($type['type_name']) ?></td>
+                                        <td><?= htmlspecialchars($color['color_name']) ?></td>
+                                        <td><?= htmlspecialchars($color['color_hex'] ?? '-') ?></td>
+                                        <td>
+                                            <?php if (!empty($color['color_hex'])): ?>
+                                            <div
+                                                style="width: 30px; height: 30px; background-color: <?= htmlspecialchars($color['color_hex']) ?>; border: 1px solid #ccc; margin: auto;">
+                                            </div>
+                                            <?php else: ?>
+                                            -
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <button type="button" class="btn btn-primary btn-sm edit-btn"
-                                                data-bs-toggle="modal" data-bs-target="#editItemTypeModal"
-                                                data-id="<?= $type['id'] ?>"
-                                                data-name="<?= htmlspecialchars($type['type_name']) ?>">
+                                                data-bs-toggle="modal" data-bs-target="#editColorModal"
+                                                data-id="<?= $color['id'] ?>"
+                                                data-name="<?= htmlspecialchars($color['color_name']) ?>"
+                                                data-hex="<?= htmlspecialchars($color['color_hex'] ?? '') ?>">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="?action=delete&id=<?= $type['id'] ?>" class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Apakah Anda yakin ingin menghapus jenis barang ini? (Ini tidak bisa dihapus jika ada barang yang menggunakannya)');">
+                                            <a href="?action=delete&id=<?= $color['id'] ?>"
+                                                class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Apakah Anda yakin ingin menghapus warna ini? (Ini tidak bisa dihapus jika ada barang yang menggunakannya)');">
                                                 <i class="fas fa-trash-alt"></i>
                                             </a>
                                         </td>
@@ -193,49 +208,57 @@ $item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_na
         </div>
     </div>
 
-    <div class="modal fade" id="addItemTypeModal" tabindex="-1" aria-labelledby="addItemTypeModalLabel"
-        aria-hidden="true">
+    <div class="modal fade" id="addColorModal" tabindex="-1" aria-labelledby="addColorModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addItemTypeModalLabel">Tambah Jenis Barang Baru</h5>
+                    <h5 class="modal-title" id="addColorModalLabel">Tambah Warna Baru</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form method="POST" action="">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="type_name" class="form-label">Nama Jenis Barang</label>
-                            <input type="text" class="form-control" id="type_name" name="type_name" required>
+                            <label for="add_color_name" class="form-label">Nama Warna</label>
+                            <input type="text" class="form-control" id="add_color_name" name="color_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="add_color_hex" class="form-label">Kode Hex (Opsional)</label>
+                            <input type="color" class="form-control form-control-color" id="add_color_hex"
+                                name="color_hex" value="#000000" title="Pilih Kode Hex">
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" name="add_item_type" class="btn btn-primary">Tambah Jenis</button>
+                        <button type="submit" name="add_color" class="btn btn-primary">Tambah Warna</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="editItemTypeModal" tabindex="-1" aria-labelledby="editItemTypeModalLabel"
-        aria-hidden="true">
+    <div class="modal fade" id="editColorModal" tabindex="-1" aria-labelledby="editColorModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editItemTypeModalLabel">Edit Jenis Barang</h5>
+                    <h5 class="modal-title" id="editColorModalLabel">Edit Warna</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form method="POST" action="">
                     <div class="modal-body">
-                        <input type="hidden" id="edit_type_id" name="type_id">
+                        <input type="hidden" id="edit_color_id" name="color_id">
                         <div class="mb-3">
-                            <label for="edit_type_name" class="form-label">Nama Jenis Barang</label>
-                            <input type="text" class="form-control" id="edit_type_name" name="type_name" required>
+                            <label for="edit_color_name" class="form-label">Nama Warna</label>
+                            <input type="text" class="form-control" id="edit_color_name" name="color_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_color_hex" class="form-label">Kode Hex (Opsional)</label>
+                            <input type="color" class="form-control form-control-color" id="edit_color_hex"
+                                name="color_hex" value="#000000" title="Pilih Kode Hex">
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" name="edit_item_type" class="btn btn-primary">Simpan Perubahan</button>
+                        <button type="submit" name="edit_color" class="btn btn-primary">Simpan Perubahan</button>
                     </div>
                 </form>
             </div>
@@ -262,24 +285,27 @@ $item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_na
             wrapper.classList.toggle('toggled');
         });
 
-        // Script untuk mengisi data ke modal Edit Jenis Barang
-        var editItemTypeModal = document.getElementById('editItemTypeModal');
-        editItemTypeModal.addEventListener('show.bs.modal', function(event) {
+        // Script untuk mengisi data ke modal Edit Warna
+        var editColorModal = document.getElementById('editColorModal');
+        editColorModal.addEventListener('show.bs.modal', function(event) {
             var button = event.relatedTarget;
             var id = button.getAttribute('data-id');
             var name = button.getAttribute('data-name');
+            var hex = button.getAttribute('data-hex');
 
-            var modalTitle = editItemTypeModal.querySelector('.modal-title');
-            var typeIdInput = editItemTypeModal.querySelector('#edit_type_id');
-            var typeNameInput = editItemTypeModal.querySelector('#edit_type_name');
+            var modalTitle = editColorModal.querySelector('.modal-title');
+            var colorIdInput = editColorModal.querySelector('#edit_color_id');
+            var colorNameInput = editColorModal.querySelector('#edit_color_name');
+            var colorHexInput = editColorModal.querySelector('#edit_color_hex');
 
-            modalTitle.textContent = 'Edit Jenis Barang: ' + name;
-            typeIdInput.value = id;
-            typeNameInput.value = name;
+            modalTitle.textContent = 'Edit Warna: ' + name;
+            colorIdInput.value = id;
+            colorNameInput.value = name;
+            colorHexInput.value = hex || '#000000'; // Set to black if hex is empty
         });
 
         // Initialize Datatables
-        $('#itemTypesTable').DataTable({
+        $('#colorsTable').DataTable({
             "language": {
                 "lengthMenu": "Tampilkan _MENU_ data",
                 "search": "Cari:",
@@ -295,8 +321,8 @@ $item_types = $pdo->query("SELECT id, type_name FROM item_types ORDER BY type_na
             },
             "columnDefs": [{
                     "orderable": false,
-                    "targets": 2
-                } // Disable sorting for 'Aksi' column
+                    "targets": [0, 3, 4]
+                } // Disable sorting for 'No.', 'Contoh', 'Aksi'
             ]
         });
     });
